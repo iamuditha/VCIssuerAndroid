@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">VCIssuerAndroid</string>
+    <string name="main_contractor_address">address</string>
+
+    <string name="open">OPEN</string>
+    <string name="close">CLOSE</string>
+</resources>

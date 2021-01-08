@@ -114,7 +114,7 @@ class MainActivity : BaseActivity() {
 
             }
             thread.start()
-            thread.join()
+            thread.join() 
         }catch (e : Exception){
             Log.i("fucked", e.toString())
         }

@@ -6,7 +6,6 @@ class GoogleDriveFileHolder {
     private var id: String? = null
     private var name: String? = null
     private var modifiedTime: Date? = null
-    private var size: Long = 0
     private var createdTime: Date? = null
     private var starred: Boolean? = null
     private var webContentLink: String? = null
@@ -15,8 +14,8 @@ class GoogleDriveFileHolder {
         return webContentLink
     }
 
-    fun setWebContentLink(webContentLink: String): String? {
-        return this.webContentLink
+    fun setWebContentLink(webContentLink: String) {
+        this.webContentLink = webContentLink
     }
 
     fun getCreatedTime(): Date? {
@@ -59,12 +58,6 @@ class GoogleDriveFileHolder {
         this.modifiedTime = modifiedTime
     }
 
-    fun getSize(): Long {
-        return size
-    }
 
-    fun setSize(size: Long) {
-        this.size = size
-    }
 
 }

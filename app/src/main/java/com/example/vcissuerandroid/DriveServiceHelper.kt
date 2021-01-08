@@ -1,8 +1,6 @@
 package com.example.vcissuerandroid
 
-import android.content.pm.PackageManager
 import android.util.Log
-import androidx.core.content.ContextCompat
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.api.client.http.FileContent
@@ -97,7 +95,7 @@ class DriveServiceHelper(private val mDriveService: Drive) {
             result = mDriveService.files()
                 .list()
                 .setSpaces("drive")
-                .setFields("nextPageToken, files(id,name,webContentLink,shared,permissions)")
+                .setFields("files(id,name,webContentLink)")
                 .setPageToken(pageToken)
                 .execute()
             pageToken = result.nextPageToken
@@ -116,13 +114,20 @@ class DriveServiceHelper(private val mDriveService: Drive) {
             val fileContent = FileContent(mimeType, localFile)
             val fileMeta = mDriveService.files().create(
                 metadata,
-                fileContent
+                fileContent,
             ).execute()
+
+
+            val permission = Permission().setType("anyone").setRole("reader")
+
+            mDriveService.Permissions().create(fileMeta.id,permission).execute()
+
+            val link = mDriveService.files().get(fileMeta.id).setFields("webContentLink").execute()
 
             val googleDriveFileHolder = GoogleDriveFileHolder()
             googleDriveFileHolder.setId(fileMeta.id)
             googleDriveFileHolder.setName(fileMeta.name)
-//            googleDriveFileHolder.setWebContentLink("https://drive.google.com/file/d/"+fileMeta.id+"/view?usp=sharing")
+            googleDriveFileHolder.setWebContentLink(link.webContentLink)
             googleDriveFileHolder
         })
     }

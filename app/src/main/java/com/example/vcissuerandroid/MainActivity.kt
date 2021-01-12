@@ -10,33 +10,32 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.drawerlayout.widget.DrawerLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
 import com.google.android.material.navigation.NavigationView
 import com.google.api.client.extensions.android.http.AndroidHttp
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.gson.Gson
 import crypto.did.DID
 import crypto.did.DIDDocument
 import crypto.did.DIDDocumentGenerator
 import kotlinx.android.synthetic.main.toolbar.*
-import com.google.api.client.json.gson.GsonFactory
-import kotlinx.android.synthetic.main.activity_main.*
 import java.io.*
+import java.util.*
 
 
 class MainActivity : BaseActivity() {
@@ -49,30 +48,25 @@ class MainActivity : BaseActivity() {
     private var SCOPE_EMAIL = Scope(Scopes.EMAIL)
     private var SCOPE_APP_DATA = Scope(Scopes.DRIVE_APPFOLDER)
 
-    private val publicKey: String = ""
+    private var publicKey: String = ""
     private lateinit var pubKeyET: TextView
     private lateinit var nextBtn: Button
     private lateinit var uploadButton: Button
 
-    @RequiresApi(Build.VERSION_CODES.Q)
+//    @RequiresApi(Build.VERSION_CODES.Q)
 
-    var gso: GoogleSignInOptions = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-        .requestEmail()
-        .build()
+//    var gso: GoogleSignInOptions = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//        .requestEmail()
+//        .build()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        listFilesInDrive()
 
         nextBtn = findViewById(R.id.next)
         pubKeyET = findViewById(R.id.pKeyET)
         uploadButton = findViewById(R.id.uploadBtn)
-        onNextButtonClicked(nextBtn)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            onUploadButtonClicked(uploadButton)
-        }
 
         //toolbar and drawer setup
         (R.id.toolbar_main)
@@ -104,34 +98,44 @@ class MainActivity : BaseActivity() {
 
         navUsername.text = name
         navUserEmail.text = email
-        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
+//        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
 
-        try {
-            val thread = Thread{
-//                writeToFile("helloworldIamuditha","testingFile.txt",this)
-                val text = readFromFile("testingFile.txt",this)
-                Log.i("readtext", text)
+        getPermission()
 
-            }
-            thread.start()
-            thread.join()
-        }catch (e : Exception){
-            Log.i("fucked", e.toString())
+//        checkForDidDocument()
+        listFilesInDrive()
+
+        val threadf = Thread{
+            downloadFileFromDrive("1KAB-FGS4b5Xj2Qp8MjKr-YZhrDtntZ96")
         }
+        threadf.start()
+        uploadButton.setOnClickListener{
+            filePicker()
+        }
+
+        nextBtn.setOnClickListener{
+            if (publicKey == ""){
+                Toast.makeText(this,"Could not find the Public Key", Toast.LENGTH_SHORT).show()
+            }else{
+                val didDocument = generateDidDoc(publicKey)
+                val intent = Intent(this, NextActivity::class.java)
+                intent.putExtra("didDocString", didDocument)
+                startActivity(intent)
+            }
+        }
+
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-//        if (requestCode == 999 && resultCode == Activity.RESULT_OK && data!= null){
-//            val destination =  File(Environment.getExternalStorageDirectory().absolutePath + "/filenamehjkl.txt");
-//            val newDestination = File(applicationContext.filesDir.absolutePath + "/didDocument.txt")
-//
-//            val `in` = contentResolver.openInputStream(data.data!!)
-//            if (`in` != null) {
-//                copyInputStreamToFile(`in`, newDestination)
-//            }
-//
-//        }
+        if (requestCode == 999 && resultCode == Activity.RESULT_OK && data!= null){
+            Log.i("filePicker", data.data!!.path!!)
+
+            if (data.data != null){
+                publicKey = readTextFromUri(data.data!!)!!
+                Log.i("filePicker",publicKey)
+            }
+        }
     }
 
     private fun generateDidDoc(publicKey: String): String {
@@ -143,46 +147,16 @@ class MainActivity : BaseActivity() {
 
     }
 
-    private fun onNextButtonClicked(nextBtn: Button) {
-        nextBtn.setOnClickListener(View.OnClickListener {
-//            val didString:String = generateDidDoc(this.pubKeyET.text.toString() )
-            val intent: Intent = Intent(this, NextActivity::class.java)
-//            Log.i("tag", pubKeyET.text.toString())
-//            //upload to google drive and get link
-//            intent.putExtra("didDocString", didString)
-//            intent.putExtra("issuerDid","issuerDid")
-//            Log.i("tag", didString)
-            startActivity(intent)
-
-//            getPermission()
-//            checkForGooglePermissions()
-//            uploadFileToDrive()
-
-        })
-    }
-
-    @RequiresApi(Build.VERSION_CODES.Q)
-    fun onUploadButtonClicked(uploadButton: Button) {
-        uploadButton.setOnClickListener(
-            View.OnClickListener {
-                val file: Intent =
-                    Intent(Intent.ACTION_OPEN_DOCUMENT, MediaStore.Downloads.EXTERNAL_CONTENT_URI)
-                startActivityForResult(file, RESULT_FIRST_USER)
-
-            }
-        )
-    }
-
     //get permission for the device to access the files
     private fun getPermission() {
         //if the system is marshmallow or above get the run time permission
         if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED ||
-            checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED
+            checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED
         ) {
             //permission was not enabled
             val permission = arrayOf(
-                android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
             )
             //show popup to request permission
             requestPermissions(permission, REQUEST_ACCESS_STORAGE)
@@ -247,6 +221,28 @@ class MainActivity : BaseActivity() {
                 )
             }
     }
+    private fun downloadFileFromDrive(id:String) {
+        val file = File(filesDir.absolutePath, "issuerDid.jpg")
+        if (mDriveServiceHelper == null){
+            checkForGooglePermissions()
+        }
+        mDriveServiceHelper!!.downloadFile(file, id)
+            ?.addOnSuccessListener { googleDriveFileHolder ->
+                val gson = Gson()
+                Log.i(
+                    "fileDownloading",
+                    "on success File download" + gson.toJson(googleDriveFileHolder)
+                )
+            }
+            ?.addOnFailureListener { e ->
+                Log.i(
+                    "fileDownloading",
+                    "on failure of file download" + e.message
+                )
+            }
+    }
+
+
 
     private fun filePicker() {
         var chooseFile = Intent(Intent.ACTION_GET_CONTENT)
@@ -273,7 +269,9 @@ class MainActivity : BaseActivity() {
                 }
                 thread1.start()
                 thread1.join()
-
+                for (i in DriveFileList.driveFileList()) {
+                    Log.i("myFileList", i.toString())
+                }
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -304,7 +302,7 @@ class MainActivity : BaseActivity() {
             if (inputStream != null) {
                 val inputStreamReader = InputStreamReader(inputStream)
                 val bufferedReader = BufferedReader(inputStreamReader)
-                var receiveString: String? = ""
+                var receiveString: String?
                 val stringBuilder = StringBuilder()
                 while (bufferedReader.readLine().also { receiveString = it } != null) {
                     stringBuilder.append("\n").append(receiveString)
@@ -320,5 +318,38 @@ class MainActivity : BaseActivity() {
         }
         Log.i("did", "$fileName contains : $mText")
         return mText
+    }
+
+    private fun readTextFromUri(uri: Uri): String?{
+        return try {
+            val `in`: InputStream? = contentResolver.openInputStream(uri)
+            val r = BufferedReader(InputStreamReader(`in`))
+            val total = StringBuilder()
+            var line: String?
+            while (r.readLine().also { line = it } != null) {
+                total.append(line).append('\n')
+            }
+            total.toString()
+        } catch (e: Exception) {
+            Log.i("filePicker",e.toString())
+            null
+        }
+    }
+
+    private fun randomString(): String{
+        return UUID.randomUUID().toString()
+    }
+
+    private fun checkForDidDocument(){
+        val fileListingThread = Thread{
+            listFilesInDrive()
+        }
+        fileListingThread.start()
+
+        val creatingDidThread = Thread{
+            if (DriveFileList.isFileAvailable("issuerDid.txt")){
+                val fileId = DriveFileList.getFolderId("issuerDid.txt")
+            }
+        }
     }
 }

@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
@@ -16,11 +15,12 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.drawerlayout.widget.DrawerLayout
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
+import com.example.vcissuerandroid.drive.DriveFileList
+import com.example.vcissuerandroid.drive.DriveServiceHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
@@ -38,7 +38,7 @@ import java.io.*
 import java.util.*
 
 
-class MainActivity : BaseActivity() {
+class DidGenarateActivity : BaseActivity() {
 
     private val REQUEST_ACCESS_STORAGE: Int = 100
     private var googleDriveService: Drive? = null
@@ -61,12 +61,14 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_did_genarator)
 
 
         nextBtn = findViewById(R.id.next)
         pubKeyET = findViewById(R.id.pKeyET)
         uploadButton = findViewById(R.id.uploadBtn)
+
+//        nextBtn.visibility = View.INVISIBLE
 
         //toolbar and drawer setup
         (R.id.toolbar_main)
@@ -98,29 +100,35 @@ class MainActivity : BaseActivity() {
 
         navUsername.text = name
         navUserEmail.text = email
-//        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
+        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
 
         getPermission()
-
-//        checkForDidDocument()
-        listFilesInDrive()
-
-        val threadf = Thread{
-            downloadFileFromDrive("1KAB-FGS4b5Xj2Qp8MjKr-YZhrDtntZ96")
-        }
-        threadf.start()
+//
+////        listFilesInDrive()
+//
+////        val threadf = Thread{
+////            downloadFileFromDrive("1KAB-FGS4b5Xj2Qp8MjKr-YZhrDtntZ96")
+////        }
+//        threadf.start()
         uploadButton.setOnClickListener{
             filePicker()
         }
 
         nextBtn.setOnClickListener{
-            if (publicKey == ""){
+            if (publicKey == "" && pubKeyET.text.toString().trim() == ""){
                 Toast.makeText(this,"Could not find the Public Key", Toast.LENGTH_SHORT).show()
             }else{
-                val didDocument = generateDidDoc(publicKey)
-                val intent = Intent(this, NextActivity::class.java)
-                intent.putExtra("didDocString", didDocument)
-                startActivity(intent)
+                if (publicKey == ""){
+                    publicKey = pubKeyET.text.toString().trim()
+                }
+                else{
+                    val didDocument = generateDidDoc(publicKey)
+                    Log.i("didGenerator", publicKey)
+                    Log.i("didGenerator", didDocument)
+//                    val intent = Intent(this, NextActivity::class.java)
+//                    intent.putExtra("didDocString", didDocument)
+//                    startActivity(intent)
+                }
             }
         }
 
@@ -174,7 +182,7 @@ class MainActivity : BaseActivity() {
             )
         ) {
             GoogleSignIn.requestPermissions(
-                this@MainActivity,
+                this@DidGenarateActivity,
                 RC_AUTHORIZE_DRIVE,
                 GoogleSignIn.getLastSignedInAccount(applicationContext),
                 ACCESS_DRIVE_SCOPE,
@@ -188,7 +196,7 @@ class MainActivity : BaseActivity() {
 
     //request the google drive permission for the device
     private fun driveSetUp() {
-        val mAccount = GoogleSignIn.getLastSignedInAccount(this@MainActivity)
+        val mAccount = GoogleSignIn.getLastSignedInAccount(this@DidGenarateActivity)
         val credential = GoogleAccountCredential.usingOAuth2(
             applicationContext, setOf(Scopes.DRIVE_APPFOLDER)
         )

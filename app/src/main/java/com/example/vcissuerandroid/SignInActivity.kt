@@ -1,12 +1,10 @@
 package com.example.vcissuerandroid
 
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
-import androidx.viewpager.widget.ViewPager
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -64,7 +62,7 @@ class SignInActivity : AppCompatActivity() {
         val account = GoogleSignIn.getLastSignedInAccount(this)
         account?.let { getProfileData(it) }
         if (account != null) {
-            val intent = Intent(this, MainActivity::class.java)/********************************************************************/
+            val intent = Intent(this, NextActivity::class.java)/********************************************************************/
             startActivity(intent)
         }
     }
@@ -87,7 +85,7 @@ class SignInActivity : AppCompatActivity() {
                 getProfileData(account)
             }
             // Signed in successfully, show authenticated UI.
-            val intent = Intent(this, SignInActivity::class.java) /*******************************************************************/
+            val intent = Intent(this, DidGenarateActivity::class.java) /*******************************************************************/
             startActivity(intent)
         } catch (e: ApiException) {
             Log.w("SignedIn", "signInResult:failed code=" + e.statusCode)

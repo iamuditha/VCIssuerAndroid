@@ -11,6 +11,8 @@ import android.widget.EditText
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import androidx.appcompat.app.AppCompatActivity
+import com.example.vcissuerandroid.drive.DriveFileList
+import com.example.vcissuerandroid.drive.DriveServiceHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
@@ -60,6 +62,7 @@ class NextActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_next)
         checkForGooglePermissions()
+
         //initialize xml
         registerBtn = findViewById(R.id.registerBtn)
         fName = findViewById(R.id.fNameET)

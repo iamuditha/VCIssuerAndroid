@@ -1,5 +1,6 @@
-package com.example.vcissuerandroid
+package com.example.vcissuerandroid.drive
 
+import android.util.Log
 import com.google.api.services.drive.model.File
 
 object DriveFileList {
@@ -36,14 +37,17 @@ object DriveFileList {
     }
 
     fun isFileAvailable(fileName : String): Boolean {
-        var isFileAvailable = false
-        for (file in uploadedFileList){
-            if(file.name == fileName){
-                isFileAvailable = true
-                break
+        Log.i("getFolderId", "i am called and len is ${driveFileList().size}")
+        var isFileAvailableInDrive = false
+        for (file in driveFileList()){
+            if(file.name.toString() == fileName){
+                Log.i("getFolderId", file.name.toString())
+                isFileAvailableInDrive = true
+
             }
         }
-        return isFileAvailable
+        Log.i("getFolderId", isFileAvailableInDrive.toString())
+        return isFileAvailableInDrive
     }
     fun getFolderId(fileName: String): String? {
         var fileId = ""

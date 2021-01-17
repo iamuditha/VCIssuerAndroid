@@ -31,7 +31,7 @@ import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
-class NextActivity : AppCompatActivity() {
+class VCGenerateActivity : AppCompatActivity() {
     lateinit var didDoc:DIDDocument
     lateinit var didHash:String
     lateinit var gender: String
@@ -241,7 +241,7 @@ class NextActivity : AppCompatActivity() {
             )
         ) {
             GoogleSignIn.requestPermissions(
-                this@NextActivity,
+                this@VCGenerateActivity,
                 RC_AUTHORIZE_DRIVE,
                 GoogleSignIn.getLastSignedInAccount(applicationContext),
                 ACCESS_DRIVE_SCOPE,

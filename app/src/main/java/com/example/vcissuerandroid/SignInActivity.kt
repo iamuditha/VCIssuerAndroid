@@ -62,7 +62,7 @@ class SignInActivity : AppCompatActivity() {
         val account = GoogleSignIn.getLastSignedInAccount(this)
         account?.let { getProfileData(it) }
         if (account != null) {
-            val intent = Intent(this, NextActivity::class.java)/********************************************************************/
+            val intent = Intent(this, VCGenerateActivity::class.java)/********************************************************************/
             startActivity(intent)
         }
     }

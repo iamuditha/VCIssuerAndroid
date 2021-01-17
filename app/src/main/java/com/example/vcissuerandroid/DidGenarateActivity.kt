@@ -125,7 +125,7 @@ class DidGenarateActivity : BaseActivity() {
                     val didDocument = generateDidDoc(publicKey)
                     Log.i("didGenerator", publicKey)
                     Log.i("didGenerator", didDocument)
-//                    val intent = Intent(this, NextActivity::class.java)
+//                    val intent = Intent(this, VCGenerateActivity::class.java)
 //                    intent.putExtra("didDocString", didDocument)
 //                    startActivity(intent)
                 }

@@ -25,6 +25,7 @@ import com.google.gson.GsonBuilder
 import crypto.VC.VerifiableClaim
 import crypto.VC.VerifiableClaimGenerator
 import crypto.did.DIDDocument
+import kotlinx.android.synthetic.main.toolbar.*
 import org.json.JSONObject
 import java.io.IOException
 import java.io.OutputStreamWriter
@@ -60,8 +61,13 @@ class VCGenerateActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_next)
+        setContentView(R.layout.activity_vc_generator)
         checkForGooglePermissions()
+
+        setSupportActionBar(toolbar_main)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setHomeButtonEnabled(true)
+
 
         //initialize xml
         registerBtn = findViewById(R.id.registerBtn)

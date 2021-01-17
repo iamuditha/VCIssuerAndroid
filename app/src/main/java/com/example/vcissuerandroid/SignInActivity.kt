@@ -62,7 +62,7 @@ class SignInActivity : AppCompatActivity() {
         val account = GoogleSignIn.getLastSignedInAccount(this)
         account?.let { getProfileData(it) }
         if (account != null) {
-            val intent = Intent(this, VCGenerateActivity::class.java)/********************************************************************/
+            val intent = Intent(this, DidGenarateActivity::class.java)
             startActivity(intent)
         }
     }
@@ -85,7 +85,7 @@ class SignInActivity : AppCompatActivity() {
                 getProfileData(account)
             }
             // Signed in successfully, show authenticated UI.
-            val intent = Intent(this, DidGenarateActivity::class.java) /*******************************************************************/
+            val intent = Intent(this, DidGenarateActivity::class.java)
             startActivity(intent)
         } catch (e: ApiException) {
             Log.w("SignedIn", "signInResult:failed code=" + e.statusCode)

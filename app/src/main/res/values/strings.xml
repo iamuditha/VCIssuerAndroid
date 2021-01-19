@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">VCIssuerAndroid</string>
+    <string name="app_name">Certificate Authority</string>
     <string name="main_contractor_address">address</string>
 
     <string name="open">OPEN</string>

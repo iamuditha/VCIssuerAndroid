@@ -18,6 +18,10 @@
 
     <color name="Transparent">#00000000</color>
 
+    <color name="orange">#FF5722</color>
+    <color name="yellow">#FFC107</color>
+
+
 
 
 </resources>

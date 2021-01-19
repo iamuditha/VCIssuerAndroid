@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
+import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -32,7 +33,7 @@ import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
-class VCGenerateActivity : AppCompatActivity() {
+class VCGenerateActivity : BaseActivity() {
     lateinit var didDoc:DIDDocument
     lateinit var didHash:String
     lateinit var gender: String
@@ -94,6 +95,16 @@ class VCGenerateActivity : AppCompatActivity() {
         onRegisterButtonClicked(registerBtn);
         onCheckedGenderRG(genderRG)
 
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
     private fun onCheckedGenderRG(genderRG: RadioGroup) {
         genderRG.setOnCheckedChangeListener { _, checkedId ->

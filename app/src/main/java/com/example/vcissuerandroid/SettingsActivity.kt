@@ -1,24 +1,44 @@
 package com.example.vcissuerandroid
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.graphics.PorterDuff
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import com.example.vcissuerandroid.drive.DriveFileList
 import com.example.vcissuerandroid.drive.DriveServiceHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.OnSuccessListener
+import com.google.android.material.navigation.NavigationView
 import com.google.api.client.extensions.android.http.AndroidHttp
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
-import kotlin.concurrent.thread
+import kotlinx.android.synthetic.main.activity_settings.*
+import kotlinx.android.synthetic.main.toolbar.*
 
-class SettingsActivity : AppCompatActivity() {
+class SettingsActivity : BaseActivity() ,NavigationView.OnNavigationItemSelectedListener{
 
+    private val REQUEST_ACCESS_STORAGE: Int = 105
     var mDriveServiceHelper: DriveServiceHelper? = null
     lateinit var googleDriveService: Drive
 
@@ -32,16 +52,86 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings_acttivity)
+        setContentView(R.layout.activity_settings)
 
         checkForGooglePermissions()
+        //toolbar and drawer setup
+        (R.id.toolbar_main)
+        setSupportActionBar(toolbar_main)
+        val drawerLayout = findViewById<DrawerLayout>(R.id.drawerLayout)
 
-//        val thread = Thread {
-//            getFolderID()
-//        }
-//        thread.start()
+        val actionBarDrawerToggle = ActionBarDrawerToggle(
+            this,
+            drawerLayout,
+            toolbar_main,
+            R.string.open,
+            R.string.close
+        )
+        drawerLayout.addDrawerListener(actionBarDrawerToggle)
+        actionBarDrawerToggle.syncState()
+        supportActionBar?.setHomeButtonEnabled(true)
 
-        getFolderID()
+        val prefs: SharedPreferences = getSharedPreferences("PROFILE_DATA", MODE_PRIVATE)
+        val name: String? = prefs.getString("name", "No name defined")
+        val email: String? = prefs.getString("email", "no email")
+        val url: String? = prefs.getString("url", "no url")
+
+        val navigationView: NavigationView = findViewById<View>(R.id.nav_view) as NavigationView
+        val headerView: View = navigationView.getHeaderView(0)
+        val navUsername = headerView.findViewById(R.id.doctorName) as TextView
+        val navUserEmail = headerView.findViewById(R.id.doctorEmail) as TextView
+        val navUserImage = headerView.findViewById(R.id.doctorImage) as ImageView
+
+
+        navUsername.text = name
+        navUserEmail.text = email
+        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
+
+        getPermission()
+
+        getStarted.setOnClickListener{
+            buttonEffect(getStarted)
+//            getStarted.setBackgroundColor(getColor(R.color.yellow))
+//            getStarted.setBackgroundColor(getColor(R.color.orange))
+            val intent = Intent(this,DidGenerateActivity::class.java)
+            startActivity(intent)
+        }
+
+//        getFolderID()
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun buttonEffect(button: View) {
+        button.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.background.setColorFilter( getColor(R.color.yellow), PorterDuff.Mode.SRC_ATOP)
+                    v.invalidate()
+                }
+                MotionEvent.ACTION_UP -> {
+                    v.background.clearColorFilter()
+                    v.invalidate()
+                }
+            }
+            false
+        }
+    }
+
+    //get permission for the device to access the files
+    private fun getPermission() {
+        //if the system is marshmallow or above get the run time permission
+        if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED ||
+            checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED
+        ) {
+            //permission was not enabled
+            val permission = arrayOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            )
+            //show popup to request permission
+            requestPermissions(permission, REQUEST_ACCESS_STORAGE)
+
+        }
     }
 
 
@@ -166,6 +256,36 @@ class SettingsActivity : AppCompatActivity() {
                     "Failed to Upload. File Id :" + e.message
                 )
             }
+    }
+
+    override fun onNavigationItemSelected(item: MenuItem): Boolean {
+        val id = item.itemId
+        Log.i("logout","id.toString()")
+
+        when (id) {
+            (R.id.logout) -> {
+                Log.i("logout","logout pressed")
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestEmail()
+                    .build()
+                GoogleSignIn.getClient(this, gso).signOut()
+                    .addOnCompleteListener(this, OnCompleteListener<Void?> {
+                        val intent = Intent(applicationContext, SignInActivity::class.java)
+                        startActivity(intent)
+                        Toast.makeText(this, "Logout Successfully", Toast.LENGTH_SHORT).show()
+                    }).addOnFailureListener {
+                        Toast.makeText(this, "Issue with Logout", Toast.LENGTH_SHORT).show()
+                    }
+                Toast.makeText(this, "I am clicked", Toast.LENGTH_SHORT).show()
+                drawerLayout.closeDrawer(GravityCompat.START)
+                return true
+            }
+            else -> {
+                drawerLayout.closeDrawer(GravityCompat.START)
+                return true
+            }
+        }
+
     }
 
 }

@@ -4,27 +4,20 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
-import android.view.View
+import android.view.MenuItem
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.drawerlayout.widget.DrawerLayout
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions
 import com.example.vcissuerandroid.drive.DriveFileList
 import com.example.vcissuerandroid.drive.DriveServiceHelper
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
-import com.google.android.material.navigation.NavigationView
 import com.google.api.client.extensions.android.http.AndroidHttp
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.json.gson.GsonFactory
@@ -38,7 +31,7 @@ import java.io.*
 import java.util.*
 
 
-class DidGenarateActivity : BaseActivity() {
+class DidGenerateActivity : BaseActivity() {
 
     private val REQUEST_ACCESS_STORAGE: Int = 100
     private var googleDriveService: Drive? = null
@@ -71,36 +64,26 @@ class DidGenarateActivity : BaseActivity() {
 //        nextBtn.visibility = View.INVISIBLE
 
         //toolbar and drawer setup
-        (R.id.toolbar_main)
         setSupportActionBar(toolbar_main)
-        val drawerLayout = findViewById<DrawerLayout>(R.id.drawerLayout)
-
-        val actionBarDrawerToggle = ActionBarDrawerToggle(
-            this,
-            drawerLayout,
-            toolbar_main,
-            R.string.open,
-            R.string.close
-        )
-        drawerLayout.addDrawerListener(actionBarDrawerToggle)
-        actionBarDrawerToggle.syncState()
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeButtonEnabled(true)
 
-        val prefs: SharedPreferences = getSharedPreferences("PROFILE_DATA", MODE_PRIVATE)
-        val name: String? = prefs.getString("name", "No name defined")
-        val email: String? = prefs.getString("email", "no email")
-        val url: String? = prefs.getString("url", "no url")
 
-        val navigationView: NavigationView = findViewById<View>(R.id.nav_view) as NavigationView
-        val headerView: View = navigationView.getHeaderView(0)
-        val navUsername = headerView.findViewById(R.id.doctorName) as TextView
-        val navUserEmail = headerView.findViewById(R.id.doctorEmail) as TextView
-        val navUserImage = headerView.findViewById(R.id.doctorImage) as ImageView
-
-
-        navUsername.text = name
-        navUserEmail.text = email
-        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
+//        val prefs: SharedPreferences = getSharedPreferences("PROFILE_DATA", MODE_PRIVATE)
+//        val name: String? = prefs.getString("name", "No name defined")
+//        val email: String? = prefs.getString("email", "no email")
+//        val url: String? = prefs.getString("url", "no url")
+//
+//        val navigationView: NavigationView = findViewById<View>(R.id.nav_view) as NavigationView
+//        val headerView: View = navigationView.getHeaderView(0)
+//        val navUsername = headerView.findViewById(R.id.doctorName) as TextView
+//        val navUserEmail = headerView.findViewById(R.id.doctorEmail) as TextView
+//        val navUserImage = headerView.findViewById(R.id.doctorImage) as ImageView
+//
+//
+//        navUsername.text = name
+//        navUserEmail.text = email
+//        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
 
         getPermission()
 //
@@ -116,7 +99,7 @@ class DidGenarateActivity : BaseActivity() {
 
         nextBtn.setOnClickListener{
             if (publicKey == "" && pubKeyET.text.toString().trim() == ""){
-                Toast.makeText(this,"Could not find the Public Key", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Could not find the Public Key", Toast.LENGTH_SHORT).show()
             }else{
                 if (publicKey == ""){
                     publicKey = pubKeyET.text.toString().trim()
@@ -133,7 +116,15 @@ class DidGenarateActivity : BaseActivity() {
         }
 
     }
-
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 999 && resultCode == Activity.RESULT_OK && data!= null){
@@ -141,7 +132,7 @@ class DidGenarateActivity : BaseActivity() {
 
             if (data.data != null){
                 publicKey = readTextFromUri(data.data!!)!!
-                Log.i("filePicker",publicKey)
+                Log.i("filePicker", publicKey)
             }
         }
     }
@@ -182,7 +173,7 @@ class DidGenarateActivity : BaseActivity() {
             )
         ) {
             GoogleSignIn.requestPermissions(
-                this@DidGenarateActivity,
+                this@DidGenerateActivity,
                 RC_AUTHORIZE_DRIVE,
                 GoogleSignIn.getLastSignedInAccount(applicationContext),
                 ACCESS_DRIVE_SCOPE,
@@ -196,7 +187,7 @@ class DidGenarateActivity : BaseActivity() {
 
     //request the google drive permission for the device
     private fun driveSetUp() {
-        val mAccount = GoogleSignIn.getLastSignedInAccount(this@DidGenarateActivity)
+        val mAccount = GoogleSignIn.getLastSignedInAccount(this@DidGenerateActivity)
         val credential = GoogleAccountCredential.usingOAuth2(
             applicationContext, setOf(Scopes.DRIVE_APPFOLDER)
         )
@@ -229,7 +220,7 @@ class DidGenarateActivity : BaseActivity() {
                 )
             }
     }
-    private fun downloadFileFromDrive(id:String) {
+    private fun downloadFileFromDrive(id: String) {
         val file = File(filesDir.absolutePath, "issuerDid.jpg")
         if (mDriveServiceHelper == null){
             checkForGooglePermissions()
@@ -339,7 +330,7 @@ class DidGenarateActivity : BaseActivity() {
             }
             total.toString()
         } catch (e: Exception) {
-            Log.i("filePicker",e.toString())
+            Log.i("filePicker", e.toString())
             null
         }
     }

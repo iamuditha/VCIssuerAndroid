@@ -1,19 +1,14 @@
 package com.example.vcissuerandroid
 
-import ContractorHandlers.IAMContractorHandler
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
-import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import androidx.appcompat.app.AppCompatActivity
-import com.example.vcissuerandroid.drive.DriveFileList
+import android.widget.*
 import com.example.vcissuerandroid.drive.DriveServiceHelper
+import com.example.vcissuerandroid.utils.KeyHolder
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.Scopes
 import com.google.android.gms.common.api.Scope
@@ -23,6 +18,9 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import crypto.KeyHandler
+import crypto.VC.VCCover
+import crypto.VC.VcSigner
 import crypto.VC.VerifiableClaim
 import crypto.VC.VerifiableClaimGenerator
 import crypto.did.DIDDocument
@@ -34,27 +32,28 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 class VCGenerateActivity : BaseActivity() {
-    lateinit var didDoc:DIDDocument
-    lateinit var didHash:String
     lateinit var gender: String
+    lateinit var generateVC: Button
+    lateinit var fName: EditText
+    lateinit var lName: EditText
+    lateinit var email: EditText
+    lateinit var hospital: EditText
+    lateinit var speciality: EditText
+    lateinit var genderRG: RadioGroup
+    lateinit var male: RadioButton
+    lateinit var female: RadioButton
 
-    lateinit var registerBtn:Button
-    lateinit var fName:EditText
-    lateinit var lName:EditText
-    lateinit var email:EditText
-    lateinit var hospital:EditText
-    lateinit var speciality:EditText
-    lateinit var genderRG:RadioGroup
-    lateinit var male:RadioButton
-    lateinit var female:RadioButton
-
-    private lateinit var issuerDid:String
+    lateinit var did: String
+    lateinit var didHash:String
+    lateinit var vcHash: String
 
     private var RC_AUTHORIZE_DRIVE = 101
     private var ACCESS_DRIVE_SCOPE = Scope(Scopes.DRIVE_FILE)
     private var SCOPE_EMAIL = Scope(Scopes.EMAIL)
     private var SCOPE_APP_DATA = Scope(Scopes.DRIVE_APPFOLDER)
 
+    private var privateKeyId: String? = null
+    private var didDocument: String? = null
 
 
     private var googleDriveService: Drive? = null
@@ -69,9 +68,13 @@ class VCGenerateActivity : BaseActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeButtonEnabled(true)
 
+        //get data from shared preference
+        val prefs: SharedPreferences = getSharedPreferences("MY_DATA", MODE_PRIVATE)
+        didDocument = prefs.getString("myDid", null)
+        privateKeyId = prefs.getString("privateKeyId", null)
 
         //initialize xml
-        registerBtn = findViewById(R.id.registerBtn)
+        generateVC = findViewById(R.id.vcGenerator)
         fName = findViewById(R.id.fNameET)
         lName = findViewById(R.id.lNameET)
         email = findViewById(R.id.emailET)
@@ -81,18 +84,36 @@ class VCGenerateActivity : BaseActivity() {
         male = findViewById(R.id.male)
         female = findViewById(R.id.female)
 
-        var gson = Gson()
-        val did = "mudiddocument"
-        didDoc = DIDDocument("didididid", "eeddgfhkmk")
-        issuerDid = "dfbkhkjkj"
-//        didDoc = gson.fromJson(intent.getStringExtra("didDocString"), DIDDocument::class.java)
-//        issuerDid = intent.getStringExtra("issuerDid")
-//        var messageDigest:MessageDigest = MessageDigest.getInstance("sha-512")
-//        didHash = String(messageDigest.digest(intent.getStringExtra("didDocString").toByteArray()),StandardCharsets.UTF_8)
-        didHash = "ddkfnsdfd"
+
+        val intent: Intent = intent
+        val didDocument = intent.getStringExtra("didDocString")
+        Log.i("verifiableClaim", "printed here" + didDocument!!)
 
 
-        onRegisterButtonClicked(registerBtn);
+        val didLink = intent.getStringExtra("didDocLink")
+        val gson = Gson()
+        did = gson.fromJson(didDocument, DIDDocument::class.java).did
+
+        Log.i("verifiableClaim", "printed here"+didLink!!)
+        Log.i("verifiableClaim", did)
+
+
+        generateVC.setOnClickListener {
+            val thread = Thread {
+                val verifiableClaim = generateDocVC()
+                val messageDigest: MessageDigest = MessageDigest.getInstance("sha-512")
+
+                val gson = Gson()
+                val vc = gson.fromJson(verifiableClaim,VCCover::class.java)
+                val vcHash = String(
+                    messageDigest.digest(gson.toJson(vc).toByteArray()),
+                    StandardCharsets.UTF_8
+                )
+                uploadFileToDrive(verifiableClaim.toByteArray(),did,didLink,didHash,vcHash)
+            }
+            thread.start()
+        }
+
         onCheckedGenderRG(genderRG)
 
     }
@@ -106,6 +127,7 @@ class VCGenerateActivity : BaseActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
     private fun onCheckedGenderRG(genderRG: RadioGroup) {
         genderRG.setOnCheckedChangeListener { _, checkedId ->
             run {
@@ -120,72 +142,91 @@ class VCGenerateActivity : BaseActivity() {
     }
 
 
-    private fun generateVC():String {
-
-//        Log.i("did", didHash)
+    private fun generateDocVC(): String {
 
         val gson = Gson()
-        val vc:VerifiableClaim = VerifiableClaimGenerator.generateVC(
-            didDoc.did, fName.text.toString(),
-            lName.text.toString(), email.text.toString(), "male", speciality.text.toString(),
-            hospital.text.toString(), didHash, issuerDid
-        )
+        Log.i("downloading", "below gson" + KeyHolder.getPrivateKey())
 
-        val vcString = gson.toJson(vc);
-        return vcString
+        val data = KeyHolder.getObject()
+        val privateKey = data.privateKey
+        Log.i("downloading",privateKey )
+//        val issuerDid
+        val issuerDidDocument = data.did
+//
+        val issuerDid = gson.fromJson(issuerDidDocument,DIDDocument::class.java).did
+        Log.i("downloading",issuerDid)
+
+        val messageDigest: MessageDigest = MessageDigest.getInstance("sha-512")
+        didHash = messageDigest.digest(did.toByteArray()).toString()
+
+
+        val vc: VerifiableClaim = VerifiableClaimGenerator.generateVC(
+            did, fName.text.toString(),
+            lName.text.toString(), email.text.toString(), "male", speciality.text.toString(),
+            hospital.text.toString(), didHash, "issuerDid"
+        )
+        val vcHash = String(
+            messageDigest.digest(gson.toJson(vc).toByteArray()),
+            StandardCharsets.UTF_8
+        )
+        Log.i("downloading", "below vc cover" + KeyHolder.getPrivateKey())
+        val vcCover = VcSigner.signVC(
+            vc,
+            vcHash,
+            KeyHandler.getInstance()
+                .loadRSAPrivateFromPlainText(privateKey)
+        )
+        Log.i("downloading", "below vc cover" + KeyHolder.getPrivateKey())
+
+        return gson.toJson(vcCover)
+
     }
 
-    private fun onRegisterButtonClicked(regBtn: Button) {
-        regBtn.setOnClickListener(View.OnClickListener {
-            val vcString: String = generateVC()
 
-            val writeThread = Thread {
-                writeToFile(vcString, "VerifiableClaim.txt", this)
-                writeToFile("mydid", "didDocument.txt", this)
+    private fun uploadFileToDrive(byteArray: ByteArray, did: String, didLink:String, didHash:String, vcHash:String) {
+        runOnUiThread {
+//            progress.show()
+        }
 
-            }
-            writeThread.start()
-
-            val uploadThread = Thread {
-                writeThread.join()
-                val dir = filesDir.absolutePath
-                uploadFileToDrive(java.io.File("$dir/VerifiableClaim.txt"),"VC")
-                uploadFileToDrive(java.io.File("$dir/didDocument.txt"),"did")
-
-            }
-            uploadThread.start()
-
-            val ethThread = Thread{
-                uploadThread.join()
-
-                val prefs: SharedPreferences = getSharedPreferences("PROFILE_DATA", MODE_PRIVATE)
-                val email: String? = prefs.getString("email", "no email")
-
-                val messageDigest: MessageDigest = MessageDigest.getInstance("sha-512")
-                var vcHash = String(
-                    messageDigest.digest(vcString.toByteArray()),
-                    StandardCharsets.UTF_8
+        mDriveServiceHelper!!.uploadFile(byteArray, "application/json", null, "verifiableClaim.json")
+            ?.addOnSuccessListener { googleDriveFileHolder ->
+                val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
+                val v = gson.toJson(googleDriveFileHolder)
+                val obj = JSONObject(v)
+                Log.i("fileUploading", obj["webContentLink"].toString())
+                Log.i(
+                    "fileUploading",
+                    "on success File upload" + gson.toJson(googleDriveFileHolder)
                 )
+                runOnUiThread {
+//                    progress.dismiss()
+                }
+                Toast.makeText(this, "Successfully Uploaded", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, RegisterActivity::class.java)
+                intent.putExtra("DoctorDid", did)
+                intent.putExtra("didLink",didLink)
+                intent.putExtra("vcLink", obj["webContentLink"].toString())
+                intent.putExtra("didHash",didHash)
+                intent.putExtra("vcHash",vcHash)
+                intent.putExtra("email",email.text.toString())
+                startActivity(intent)
+//                goToNextActivity()
 
             }
+            ?.addOnFailureListener { e ->
+                Log.i(
+                    "fileUploading",
+                    "on failure of file upload" + e.message
+                )
+                runOnUiThread {
+//                    progress.dismiss()
+                }
+                Toast.makeText(
+                    this, "Could Not Create Your File. Please Check Your Connection and Try Again.",
+                    Toast.LENGTH_SHORT
+                ).show()
 
-
-
-            //upload did and vc doc to google drive and get downloadable links
-            var vcLink: String = ""
-            var didLink: String = ""
-//            val web3j: Web3j = Web3j.build(HttpService("https://c7fc09575149.ngrok.io"))
-//
-//            val credentials = WalletUtils.loadCredentials("23456","./")
-
-            val iamContractorHandler = IAMContractorHandler.getInstance()
-
-//            val iamContract = iamContractorHandler.getWrapperForContractor(web3j,getString(R.string.main_contractor_address),credentials)
-
-            Log.i("tag", vcString)
-//            iamContract.registerDoctor(didHash, didLink, vcHash, vcLink, email.text.toString(), didDoc.did, "issuerDid" )
-//
-        })
+            }
     }
 
     //write a string to a file
@@ -203,32 +244,6 @@ class VCGenerateActivity : BaseActivity() {
         }
     }
 
-    //upload a file to the drive
-    private fun uploadFileToDrive(file: java.io.File, type:String) {
-        mDriveServiceHelper!!.uploadFile(file, "text/plain", null)
-            ?.addOnSuccessListener { googleDriveFileHolder ->
-                val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
-                val v = gson.toJson(googleDriveFileHolder)
-                val obj =  JSONObject(v)
-                Log.i("logininfo", obj["webContentLink"].toString())
-
-                if (type == "VC"){
-                    DriveFileList.setVCLink(obj["webContentLink"].toString())
-                }else if (type =="did"){
-                    DriveFileList.setDidDocumentLink(obj["webContentLink"].toString())
-                }
-                Log.i(
-                    "logininfo",
-                    "on success File upload" + gson.toJson(googleDriveFileHolder)
-                )
-            }
-            ?.addOnFailureListener { e ->
-                Log.i(
-                    "logininfo",
-                    "on failure of file upload" + e.message
-                )
-            }
-    }
 
     private fun driveSetUp() {
         val mAccount =

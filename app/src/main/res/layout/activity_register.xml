@@ -6,4 +6,63 @@
     android:layout_height="match_parent"
     tools:context=".RegisterActivity">
 
+    <include
+        layout="@layout/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#043BB1"
+        android:gravity="center"
+        android:layout_marginTop="?android:actionBarSize">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="15dp"
+            android:background="@android:color/white"
+            android:orientation="vertical"
+            android:layout_margin="12dp"
+            android:elevation="30dp"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal|center"
+                android:gravity="center"
+                android:text="Every thing is ready to finish the registration"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"/>
+
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/black"
+                android:layout_gravity="center_horizontal|center"
+                android:gravity="center"
+                android:text="Please press the below button to complete everything"
+                android:layout_marginBottom="20dp"/>
+
+            <Button
+                android:id="@+id/register"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center"
+                android:background="@drawable/orange_button_background"
+                android:drawableStart="@drawable/register"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:text="  Complete Registration"
+                android:textColor="@android:color/white"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </RelativeLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

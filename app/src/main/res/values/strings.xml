@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Certificate Authority</string>
-    <string name="main_contractor_address">address</string>
+    <string name="main_contractor_address">0x605eb6cf467c8553065e2090aeaa3bae148890f3</string>
 
     <string name="open">OPEN</string>
     <string name="close">CLOSE</string>

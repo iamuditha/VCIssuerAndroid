@@ -24,10 +24,8 @@
         android:id="@+id/sign_in_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
         android:layout_marginStart="60dp"
         android:layout_marginEnd="60dp"
-
         android:layout_marginBottom="65dp"
         android:elevation="55dp"
         android:outlineProvider="bounds"

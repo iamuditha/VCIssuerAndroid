@@ -1,13 +1,19 @@
 package com.example.vcissuerandroid
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.ProgressDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.PorterDuff
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -24,6 +30,7 @@ import com.google.gson.GsonBuilder
 import crypto.did.DID
 import crypto.did.DIDDocument
 import crypto.did.DIDDocumentGenerator
+import kotlinx.android.synthetic.main.activity_settings.*
 import kotlinx.android.synthetic.main.toolbar.*
 import org.json.JSONObject
 import java.io.*
@@ -44,6 +51,10 @@ class DidGenerateActivity : BaseActivity() {
     private lateinit var generateDid: Button
     private lateinit var uploadButton: Button
 
+    lateinit var progressDidUploading : ProgressDialog
+
+    private val gson: Gson = Gson().newBuilder().disableHtmlEscaping().create()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,19 +72,26 @@ class DidGenerateActivity : BaseActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeButtonEnabled(true)
 
+        progressDidUploading =  displayLoading(this, "Uploading the DID Document. Please Wait..........")
+
 
         uploadButton.setOnClickListener{
+            buttonEffect(uploadButton,R.color.yellow)
+            uploadButton.isEnabled = false
             filePicker()
         }
 
         generateDid.setOnClickListener{
+            buttonEffect(generateDid, R.color.gradient_end_color)
+            generateDid.isEnabled = false
             if (publicKey == "" && pubKeyET.text.toString().trim() == ""){
+                generateDid.isEnabled = true
                 Toast.makeText(this, "Could not find the Public Key", Toast.LENGTH_SHORT).show()
             }else{
+                progressDidUploading.show()
                 if (publicKey == ""){
                     publicKey = pubKeyET.text.toString().trim()
                 }
-                    Toast.makeText(this,"I am Pressed",Toast.LENGTH_SHORT).show()
                     val didDocument = generateDidDoc(publicKey)
                     Log.i("didGenerator", publicKey)
                     Log.i("didGenerator", didDocument)
@@ -84,6 +102,32 @@ class DidGenerateActivity : BaseActivity() {
            }
         }
 
+    }
+
+    //display loading dialog
+    private fun displayLoading(context: Context, message: String): ProgressDialog {
+        val progress = ProgressDialog(context)
+        progress.setMessage(message)
+        progress.setProgressStyle(ProgressDialog.STYLE_SPINNER)
+        progress.isIndeterminate = true
+        progress.setCancelable(false)
+        return progress
+    }
+    @SuppressLint("ClickableViewAccessibility")
+    fun buttonEffect(button: View, color : Int) {
+        button.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.background.setColorFilter(getColor(color), PorterDuff.Mode.SRC_ATOP)
+                    v.invalidate()
+                }
+                MotionEvent.ACTION_UP -> {
+                    v.background.clearColorFilter()
+                    v.invalidate()
+                }
+            }
+            false
+        }
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
@@ -110,7 +154,6 @@ class DidGenerateActivity : BaseActivity() {
         val did: String = DID.getInstance().generateDID()
         val didDoc: DIDDocument =
             DIDDocumentGenerator.getInstance().generateDIDDocument(did, publicKey);
-        val gson = Gson()
         return gson.toJson(didDoc)
 
     }
@@ -174,8 +217,9 @@ class DidGenerateActivity : BaseActivity() {
 
     private fun filePicker() {
         var chooseFile = Intent(Intent.ACTION_GET_CONTENT)
-        chooseFile.type = "*/*"
+        chooseFile.type = "text/plain"
         chooseFile = Intent.createChooser(chooseFile, "Choose a file")
+        uploadButton.isEnabled = true
         startActivityForResult(chooseFile, 999)
     }
 
@@ -195,11 +239,8 @@ class DidGenerateActivity : BaseActivity() {
         }
     }
     private fun uploadFileToDrive(byteArray: ByteArray,didDocument:String) {
-        runOnUiThread{
-//            progress.show()
-        }
 
-        mDriveServiceHelper!!.uploadFile(byteArray, "application/json", null,"didDocument.json")
+        mDriveServiceHelper!!.uploadFileToRoot(byteArray, "application/json", null,"didDocument.json")
             ?.addOnSuccessListener { googleDriveFileHolder ->
                 val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
                 val v = gson.toJson(googleDriveFileHolder)
@@ -210,11 +251,14 @@ class DidGenerateActivity : BaseActivity() {
                     "on success File upload" + gson.toJson(googleDriveFileHolder)
                 )
                 runOnUiThread{
-//                    progress.dismiss()
+                    progressDidUploading.dismiss()
+                    generateDid.isEnabled = true
                 }
                 Toast.makeText(this,"Successfully Uploaded",Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, VCGenerateActivity::class.java)
                 intent.putExtra("didDocString", didDocument)
+                Log.i("blockchainnew","intent check did  " + didDocument)
+
                 intent.putExtra("didDocLink",obj["webContentLink"].toString())
                 startActivity(intent)
 //                goToNextActivity()
@@ -226,7 +270,8 @@ class DidGenerateActivity : BaseActivity() {
                     "on failure of file upload" + e.message
                 )
                 runOnUiThread{
-//                    progress.dismiss()
+                    progressDidUploading.dismiss()
+                    generateDid.isEnabled = true
                 }
                 Toast.makeText(this,"Could Not Create Your File. Please Check Your Connection and Try Again.",Toast.LENGTH_SHORT).show()
 

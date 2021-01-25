@@ -1,23 +1,17 @@
 package com.example.vcissuerandroid.drive
 
 import android.util.Log
-import com.example.vcissuerandroid.myDetails
+import com.example.vcissuerandroid.MyDetails
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.client.http.FileContent
-import com.google.api.client.http.InputStreamContent
-import com.google.api.client.util.IOUtils
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import com.google.api.services.drive.model.FileList
 import com.google.api.services.drive.model.Permission
-import com.google.common.io.ByteStreams.toByteArray
 import com.google.gson.Gson
-import org.json.JSONObject
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.FileInputStream
 import java.io.IOException
 import java.util.concurrent.Callable
 import java.util.concurrent.Executor
@@ -71,7 +65,7 @@ class DriveServiceHelper(private val mDriveService: Drive) {
     }
 
     //download a file from the google drive
-    fun downloadFile(fileId: String?): Task<Nothing?>? {
+    fun downloadFile(fileId: String?): Task<Any?>? {
         return Tasks.call(
             mExecutor,
             Callable {
@@ -80,11 +74,11 @@ class DriveServiceHelper(private val mDriveService: Drive) {
                 val data: String = String(outputStream.toByteArray())
 
                 val gson = Gson()
-                val m : myDetails = gson.fromJson(data, myDetails::class.java)
-
-                Log.i("fileReading","did printed here"+ m.did)
-                Log.i("fileReading", "all data $data")
-                null
+                val m : MyDetails = gson.fromJson(data, MyDetails::class.java)
+//
+//                Log.i("fileReading","did printed here"+ m.did)
+//                Log.i("fileReading", "all data $data")
+                m
             }
         )
     }
@@ -110,7 +104,7 @@ class DriveServiceHelper(private val mDriveService: Drive) {
         do {
             result = mDriveService.files()
                 .list()
-                .setSpaces("drive")
+                .setSpaces("appDataFolder")
                 .setFields("files(id,name,webContentLink)")
                 .setPageToken(pageToken)
                 .execute()
@@ -120,29 +114,48 @@ class DriveServiceHelper(private val mDriveService: Drive) {
     }
 
     // upload a file in to google drive
-    fun uploadFile(fileInputStream: ByteArray, mimeType: String?, folderId: String?,filename: String?): Task<Any>? {
+    fun uploadFileToAppDataFolder(fileInputStream: ByteArray, mimeType: String?, folderId: String?, filename: String?): Task<Any>? {
+        return Tasks.call(mExecutor, Callable<Any> { // Retrieve the metadata as a File object.
+            val root: List<String> = folderId?.let { listOf(it) } ?: listOf("appDataFolder")
+            val metadata = File()
+                .setParents(root)
+                .setMimeType(mimeType)
+                .setName(filename)
+            val fileMeta = mDriveService.files().create(
+                metadata,
+                ByteArrayContent("json/application",fileInputStream)
+            ).execute()
+
+
+//            val permission = Permission().setType("anyone").setRole("reader")
+
+//            mDriveService.Permissions().create(fileMeta.id,permission).execute()
+
+            val link = mDriveService.files().get(fileMeta.id).setFields("webContentLink").execute()
+
+            val googleDriveFileHolder = GoogleDriveFileHolder()
+            googleDriveFileHolder.setId(fileMeta.id)
+            googleDriveFileHolder.setName(fileMeta.name)
+            googleDriveFileHolder.setWebContentLink(link.webContentLink)
+            googleDriveFileHolder
+        })
+    }
+
+    fun uploadFileToRoot(fileInputStream: ByteArray, mimeType: String?, folderId: String?, filename: String?): Task<Any>? {
         return Tasks.call(mExecutor, Callable<Any> { // Retrieve the metadata as a File object.
             val root: List<String> = folderId?.let { listOf(it) } ?: listOf("root")
             val metadata = File()
                 .setParents(root)
                 .setMimeType(mimeType)
                 .setName(filename)
-//            val fileContent = FileContent(mimeType, fileInputStream)
             val fileMeta = mDriveService.files().create(
                 metadata,
                 ByteArrayContent("json/application",fileInputStream)
             ).execute()
 
-//            val fileMeta: File = mDriveService.files().create(
-//                metadata,
-//                fileInputStream
-//                )
-//            ).execute
+            val permission = Permission().setType("anyone").setRole("reader")
 
-
-//            val permission = Permission().setType("anyone").setRole("reader")
-
-//            mDriveService.Permissions().create(fileMeta.id,permission).execute()
+            mDriveService.Permissions().create(fileMeta.id,permission).execute()
 
             val link = mDriveService.files().get(fileMeta.id).setFields("webContentLink").execute()
 

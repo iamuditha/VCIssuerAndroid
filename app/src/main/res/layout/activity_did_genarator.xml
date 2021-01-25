@@ -89,7 +89,7 @@
                     android:drawableLeft="@drawable/camera"
                     android:paddingLeft="10dp"
                     android:paddingRight="10dp"
-                    android:text="  UPLOAD"
+                    android:text="  UPLOAD DOCTOR's PUBLIC KEY  "
                     android:textColor="@android:color/white"
                     android:textStyle="bold" />
 
@@ -117,7 +117,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:drawableLeft="@drawable/key"
-                android:hint="  Enter Your Public Key"
+                android:hint="  Enter Doctor's Public Key"
                 android:layout_marginTop="12dp"
                 android:padding="8dp"
                 android:textCursorDrawable="@drawable/cursor"

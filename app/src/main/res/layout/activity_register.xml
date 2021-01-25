@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="15dp"
-            android:background="@android:color/white"
+            android:background="@drawable/white_button_background"
             android:orientation="vertical"
             android:layout_margin="12dp"
             android:elevation="30dp"
@@ -60,6 +60,20 @@
                 android:paddingLeft="10dp"
                 android:paddingRight="10dp"
                 android:text="  Complete Registration"
+                android:textColor="@android:color/white"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/sendEmail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center"
+                android:background="@drawable/orange_button_background"
+                android:drawableStart="@drawable/email"
+                android:layout_marginTop="10dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:text="  Email to Doctor"
                 android:textColor="@android:color/white"
                 android:textStyle="bold" />
         </LinearLayout>

@@ -16,9 +16,12 @@
         <activity android:name=".RegisterActivity"
             android:screenOrientation="sensorPortrait"
             android:theme="@style/newAppTheme"/>
+
+
         <activity android:name=".SettingsActivity"
             android:screenOrientation="sensorPortrait"
             android:theme="@style/newAppTheme"/>
+
         <activity android:name=".BaseActivity" />
         <activity android:name=".SignInActivity" />
         <activity android:name=".SplashScreenActivity">

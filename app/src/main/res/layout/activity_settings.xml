@@ -131,7 +131,7 @@
                     android:drawableStart="@drawable/settings"
                     android:paddingLeft="10dp"
                     android:paddingRight="10dp"
-                    android:text="  CREATE A DID FOR ME"
+                    android:text="  CREATE A DID FOR ME   "
                     android:textColor="@android:color/white"
                     android:textStyle="bold" />
 

@@ -18,6 +18,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.core.content.ContextCompat.startActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.bumptech.glide.Glide
@@ -41,6 +42,7 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import crypto.PublicPrivateKeyPairGenerator
+import crypto.did.DIDDocument
 import kotlinx.android.synthetic.main.activity_settings.*
 import kotlinx.android.synthetic.main.toolbar.*
 import org.json.JSONObject
@@ -51,7 +53,7 @@ import java.io.FileReader
 import java.lang.ref.WeakReference
 import java.util.*
 
-class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedListener {
+class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelectedListener{
 
     private val REQUEST_ACCESS_STORAGE: Int = 105
     var mDriveServiceHelper: DriveServiceHelper? = null
@@ -65,21 +67,56 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
     private var SCOPE_EMAIL = Scope(Scopes.EMAIL)
     var SCOPE_APP_DATA = Scope(Scopes.DRIVE_APPFOLDER)
 
-    lateinit var progress: ProgressDialog
+    lateinit var progressUploading: ProgressDialog
+    lateinit var progressWait: ProgressDialog
+    lateinit var progressSearchingDid: ProgressDialog
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
+        progressWait = displayLoading(this, "Please Wait..... We are setting up Every thing")
+        progressWait.show()
+        progressUploading = displayLoading(this, "Uploading your data. Please Wait.....")
+        progressSearchingDid = displayLoading(this, "Searching Your DID. Please Wait..........")
+
+
         checkForGooglePermissions()
         listFilesInDrive()
 
-        progress = displayLoading(this, "Uploading your data. Please Wait.....")
+//        val link = "https://drive.google.com/uc?id=1iIPkxoL1TQXgJr_qvDVrxsPJk_iD8ajC&export=download"
+//
+//        val thread = Thread{
+//            link.saveTo(filesDir.absolutePath+"/didDoc.json")
+//            val newOutput = utils.readFromFile("didDoc.json",this)
+//            Log.i("blocchain","newoutput : " + newOutput!!.trim())
+//            val newmessageDigest = MessageDigest.getInstance("sha-512")
+//            val newhash = Base64.getEncoder().encodeToString(newmessageDigest.digest(newOutput.trim()!!.toByteArray()))
+//            Log.i("blockchain","newhash : "+ newhash)
+//
+//
+//            val input: InputStream = URL(link).openStream()
+//            val bos = ByteArrayOutputStream()
+//            var next: Int = input.read()
+//            while (next > -1) {
+//                bos.write(next)
+//                next = input.read()
+//            }
+//            bos.flush()
+//            val result: ByteArray = bos.toByteArray()
+//            bos.close()
+//            val output = String(result)
+//            Log.i("blockchain",output)
+//
+//            val messageDigest = MessageDigest.getInstance("sha-512")
+//            val hash = Base64.getEncoder().encodeToString(messageDigest.digest(output.toByteArray()))
+//            Log.i("blockchain",hash)
+//        }
+//        thread.start()
 
 
         //toolbar and drawer setup
-        (R.id.toolbar_main)
         setSupportActionBar(toolbar_main)
         val drawerLayout = findViewById<DrawerLayout>(R.id.drawerLayout)
 
@@ -95,42 +132,80 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
         supportActionBar?.setHomeButtonEnabled(true)
 
         val prefs: SharedPreferences = getSharedPreferences("PROFILE_DATA", MODE_PRIVATE)
-        val name: String? = prefs.getString("name", "No name defined")
+        val name: String? = prefs.getString("name", "No Name")
         val email: String? = prefs.getString("email", "no email")
         val url: String? = prefs.getString("url", "no url")
 
-        val navigationView: NavigationView = findViewById<View>(R.id.nav_view) as NavigationView
+        Log.i("myImage",url)
+
+        val navigationView: NavigationView = findViewById<NavigationView>(R.id.nav_view)
         val headerView: View = navigationView.getHeaderView(0)
         val navUsername = headerView.findViewById(R.id.doctorName) as TextView
         val navUserEmail = headerView.findViewById(R.id.doctorEmail) as TextView
         val navUserImage = headerView.findViewById(R.id.doctorImage) as ImageView
 
+        navigationView.setNavigationItemSelectedListener(this)
+
 
         navUsername.text = name
         navUserEmail.text = email
-        Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
-
+        if (url != null || url != "no url"){
+            Glide.with(this).load(url).apply(RequestOptions.circleCropTransform()).into(navUserImage)
+        }
         getPermission()
 
         getStarted.setOnClickListener {
-            Toast.makeText(this, "Please Wait", Toast.LENGTH_SHORT).show()
+            val myObject = KeyHolder.getObject()
             buttonEffect(getStarted)
-            val loading = displayLoading(this, "Searching your DID Document")
-            loading.show()
-            val intent = Intent(this, DidGenerateActivity::class.java)
-            startActivity(intent)
-            loading.dismiss()
+            if (myObject.did == "" || myObject.privateKey == "" || myObject.publicKey == "" || myObject.wallet == null) {
+                buttonEffect(getStarted)
+                progressSearchingDid.show()
+                getStarted.isEnabled = false
+                val idPrefs: SharedPreferences = getSharedPreferences("MY_FILE_ID", MODE_PRIVATE)
+                val myFileId: String? = idPrefs.getString("fileID", null)
+                Log.i("myFileList", myFileId!!)
+
+                if (myFileId != null) {
+                    val thread = Thread {
+                        downLoadFile(myFileId)
+                    }
+                    thread.start()
+                }
+            } else {
+                val intent = Intent(this, DidGenerateActivity::class.java)
+                startActivity(intent)
+            }
         }
 
 
         createDid.setOnClickListener {
-            progress.show()
-            buttonEffect(createDid)
-            createDid.isEnabled = false
-            MyTask(this).execute()
+            if (KeyHolder.isRegistered != null) {
+
+                if (KeyHolder.isRegistered == false) {
+                    buttonEffect(createDid)
+                    progressUploading.show()
+                    createDid.isEnabled = false
+                    MyTask(this).execute()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "You Already Have a DID. Please Try Searching for it",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+
+            } else {
+                Toast.makeText(
+                    this,
+                    "There is a Problem. Please Try Restarting the System",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+
         }
 
     }
+
 
     //called when logging for the first time
     fun registerFirstTime() {
@@ -147,9 +222,12 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
         val oldFile = File(filesDir.absolutePath + "/" + wallet.filename)
         val newFile = File(filesDir.absolutePath + "/wallet.json")
         oldFile.renameTo(newFile)
-        val credentials = WalletUtils.loadCredentials("123456",filesDir.absolutePath+"/wallet.json")
-        Log.i("credentials",credentials.address)
-        Log.i("credentials",myDidDocument)
+        val credentials = WalletUtils.loadCredentials(
+            "123456",
+            filesDir.absolutePath + "/wallet.json"
+        )
+        Log.i("credentials", credentials.address)
+        Log.i("credentials", myDidDocument)
 
 
         val fileReader = FileReader(filesDir.absolutePath + "/wallet.json")
@@ -166,10 +244,15 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
         medico.put("privateKey", encodedPrivateKey)
         medico.put("walletData", wal)
 //        Log.i("walletAddress",wallet)
-        KeyHolder.setObject(myDidDocument, encodedPrivateKey, encodedPublicKey, wal)
+        KeyHolder.setObject(
+            Gson().fromJson(myDidDocument, DIDDocument::class.java).did,
+            encodedPrivateKey,
+            encodedPublicKey,
+            wal
+        )
         val gson = Gson()
 
-        val my = myDetails(myDidDocument, encodedPrivateKey, encodedPublicKey, wal)
+        val my = MyDetails(myDidDocument, encodedPrivateKey, encodedPublicKey, wal)
         val obj = gson.toJson(my)
 
         Log.i("fileUploading", "i am called $obj")
@@ -223,39 +306,8 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
     }
 
 
-    private fun getFolderID() {
-        val thread1 = Thread {
-            listFilesInDrive()
-        }
-        thread1.start()
-        thread1.join()
-
-        val thread2 = Thread {
-            val check = DriveFileList.isFileAvailable("vcanddiddocs")
-            Log.i("getFolderId", "check v : $check")
-
-            if (check) {
-                Log.i("getFolderId", "hello world how ar you")
-//                val folderId = DriveFileList.getFolderId("vcanddiddocs")
-//                val ids = getSharedPreferences("ID_DATA", MODE_PRIVATE).edit()
-//                ids.putString("folderId", folderId)
-//                ids.apply()
-//                val prefs: SharedPreferences = getSharedPreferences("ID_DATA", MODE_PRIVATE)
-//
-//                Log.i("getFolderId", "value of folder id is : ${prefs.getString("folderId","null")}")
-
-            } else {
-                createFolderInDrive("vcanddiddocs")
-                Log.i("getFolderId", "folder created")
-
-            }
-        }
-        thread2.start()
-//        thread2.join()
-//        getFolderID()
-    }
-
     //list the files in the drive
+    @SuppressLint("UseCompatLoadingForDrawables")
     private fun listFilesInDrive() {
         val thread = Thread(Runnable {
             try {
@@ -275,14 +327,33 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
                 for (i in DriveFileList.driveFileList()) {
                     Log.i("myFileList", i.toString())
                 }
-                val check = DriveFileList.isFileAvailable("vcanddiddocs")
-//                if(!check){
-//                    Log.i("myFileList", "called fdsjak")
-//
-//                    createDid.visibility = View.GONE
-//                }
+                val check = DriveFileList.isFileAvailable("medicoDataFileIssuer.json")
+                if (check) {
+                    Log.i("myFileList", "called inside check")
+                    val fileId = DriveFileList.getFolderId("medicoDataFileIssuer.json")
+                    Log.i("myFileList", "my file id is $fileId")
+                    val myFileId = getSharedPreferences("MY_FILE_ID", MODE_PRIVATE).edit()
+                    myFileId.putString("fileID", fileId)
+                    myFileId.apply()
+
+                    runOnUiThread {
+                        KeyHolder.isRegistered = true
+                        createDid.background = getDrawable(R.drawable.grey_button_background)
+                    }
+                }
                 Log.i("myFileList", check.toString())
+                runOnUiThread {
+                    progressWait.dismiss()
+                    Toast.makeText(this, "Everything is Ready", Toast.LENGTH_SHORT).show()
+                }
+
             } catch (e: Exception) {
+                runOnUiThread {
+                    progressWait.dismiss()
+                    Toast.makeText(this, "There is a problem. Please Try Again", Toast.LENGTH_SHORT)
+                        .show()
+                }
+
                 e.printStackTrace()
             }
         })
@@ -351,28 +422,69 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
             }
     }
 
-//    private fun downLoadFile(id: String){
-//        mDriveServiceHelper?.downloadFile(id)
-//            ?.addOnSuccessListener(OnSuccessListener<Any> { googleDriveFileHolder ->
-//                Log.i(
-//                    "creatingFolder",
-//                    "Successfully Uploaded. File Id :$googleDriveFileHolder"
-//                )
-//            })
-//            ?.addOnFailureListener { e ->
-//                Log.i(
-//                    "creatingFolder",
-//                    "Failed to Upload. File Id :" + e.message
-//                )
-//            }
-//    }
+    private fun downLoadFile(id: String) {
+        mDriveServiceHelper?.downloadFile(id)
+            ?.addOnSuccessListener { googleDriveFileHolder ->
+//                val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
+//                val v = gson.toJson(googleDriveFileHolder)
+//                val obj = JSONObject(v)
+//                val id = Gson().fromJson(obj["did"].toString(),DIDDocument::class.java)
+                val obj = googleDriveFileHolder as MyDetails
+//                KeyHolder.setObject()
+//                val publicKey = Gson().fromJson(obj["did"].toString(),DIDDocument::class.java)
+                val id = Gson().fromJson(obj.did, DIDDocument::class.java)
+
+                Log.i(
+
+                    "downloadingFile",
+                    "Successfully Uploaded. File Id :${id.did}"
+                )
+                Log.i(
+
+                    "downloadingFile",
+                    "Successfully Uploaded. File Id :${obj.publicKey}"
+                )
+                Log.i(
+
+                    "downloadingFile",
+                    "Successfully Uploaded. File Id :${obj.privateKey}"
+                )
+                Log.i(
+
+                    "downloadingFile",
+                    "Successfully Uploaded. File Id :${obj.wallet}"
+                )
+                KeyHolder.setObject(id.did, obj.privateKey, obj.publicKey, obj.wallet!!)
+
+                val intent = Intent(this, DidGenerateActivity::class.java)
+                startActivity(intent)
+                progressSearchingDid.dismiss()
+                getStarted.isEnabled = true
+
+
+            }
+            ?.addOnFailureListener { e ->
+                Log.i(
+                    "downloadingFile",
+                    "Failed to Upload. File Id :" + e.message
+                )
+                progressSearchingDid.dismiss()
+                Toast.makeText(
+                    this,
+                    "There was a Problem. Please Check Your Connection and try again",
+                    Toast.LENGTH_SHORT
+                ).show()
+                getStarted.isEnabled = true
+
+            }
+    }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         val id = item.itemId
-        Log.i("logout", "id.toString()")
+        Log.i("logout", id.toString())
 
         when (id) {
-            (R.id.logout) -> {
+            (R.id.mLogout) -> {
                 Log.i("logout", "logout pressed")
                 val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                     .requestEmail()
@@ -400,7 +512,12 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
     //upload a file to the drive
     private fun uploadFileToDrive(byteArray: ByteArray) {
 
-        mDriveServiceHelper!!.uploadFile(byteArray, "application/json", null, "myData.json")
+        mDriveServiceHelper!!.uploadFileToAppDataFolder(
+            byteArray,
+            "application/json",
+            null,
+            "medicoDataFileIssuer.json"
+        )
             ?.addOnSuccessListener { googleDriveFileHolder ->
                 val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
                 val v = gson.toJson(googleDriveFileHolder)
@@ -411,7 +528,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
                     "on success File upload" + gson.toJson(googleDriveFileHolder)
                 )
                 runOnUiThread {
-                    progress.dismiss()
+                    progressUploading.dismiss()
                 }
                 Toast.makeText(this, "Successfully Uploaded", Toast.LENGTH_SHORT).show()
 
@@ -424,7 +541,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
                     "on failure of file upload" + e.message
                 )
                 runOnUiThread {
-                    progress.dismiss()
+                    progressUploading.dismiss()
                 }
                 Toast.makeText(
                     this,
@@ -468,6 +585,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
             Log.i("uploading", result)
 
         }
+
 
     }
 }

@@ -1,11 +1,18 @@
 package com.example.vcissuerandroid
 
+import android.annotation.SuppressLint
+import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.PorterDuff
 import android.os.Bundle
+import android.text.TextUtils
 import android.util.Log
+import android.util.Patterns
 import android.view.MenuItem
+import android.view.MotionEvent
+import android.view.View
 import android.widget.*
 import com.example.vcissuerandroid.drive.DriveServiceHelper
 import com.example.vcissuerandroid.utils.KeyHolder
@@ -30,6 +37,7 @@ import java.io.IOException
 import java.io.OutputStreamWriter
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.*
 
 class VCGenerateActivity : BaseActivity() {
     lateinit var gender: String
@@ -53,11 +61,15 @@ class VCGenerateActivity : BaseActivity() {
     private var SCOPE_APP_DATA = Scope(Scopes.DRIVE_APPFOLDER)
 
     private var privateKeyId: String? = null
-    private var didDocument: String? = null
 
 
     private var googleDriveService: Drive? = null
     private var mDriveServiceHelper: DriveServiceHelper? = null
+
+    val gson = Gson().newBuilder().disableHtmlEscaping().create()
+
+    lateinit var progressUploading : ProgressDialog
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,7 +82,7 @@ class VCGenerateActivity : BaseActivity() {
 
         //get data from shared preference
         val prefs: SharedPreferences = getSharedPreferences("MY_DATA", MODE_PRIVATE)
-        didDocument = prefs.getString("myDid", null)
+//        didDocument = prefs.getString("myDid", null)
         privateKeyId = prefs.getString("privateKeyId", null)
 
         //initialize xml
@@ -84,38 +96,84 @@ class VCGenerateActivity : BaseActivity() {
         male = findViewById(R.id.male)
         female = findViewById(R.id.female)
 
+        progressUploading = displayLoading(this, "Uploading the Verifiable Claim. Please Wait...")
+
 
         val intent: Intent = intent
         val didDocument = intent.getStringExtra("didDocString")
+        Log.i("blockchainnew", "intent checking in vc $didDocument")
         Log.i("verifiableClaim", "printed here" + didDocument!!)
 
 
         val didLink = intent.getStringExtra("didDocLink")
-        val gson = Gson()
         did = gson.fromJson(didDocument, DIDDocument::class.java).did
 
-        Log.i("verifiableClaim", "printed here"+didLink!!)
+        Log.i("verifiableClaim", "printed here" + didLink!!)
         Log.i("verifiableClaim", did)
 
 
         generateVC.setOnClickListener {
-            val thread = Thread {
-                val verifiableClaim = generateDocVC()
-                val messageDigest: MessageDigest = MessageDigest.getInstance("sha-512")
-
-                val gson = Gson()
-                val vc = gson.fromJson(verifiableClaim,VCCover::class.java)
-                val vcHash = String(
-                    messageDigest.digest(gson.toJson(vc).toByteArray()),
-                    StandardCharsets.UTF_8
-                )
-                uploadFileToDrive(verifiableClaim.toByteArray(),did,didLink,didHash,vcHash)
+            buttonEffect(generateVC, R.color.gradient_end_color)
+            generateVC.isEnabled = false
+            if (fName.text.toString()=="" || lName.text.toString()=="" ||email.text.toString()==""||hospital.text.toString()==""||speciality.text.toString()==""){
+                generateVC.isEnabled = true
+                Toast.makeText(this, "Please fill All the Fields", Toast.LENGTH_SHORT).show()
             }
-            thread.start()
+            else if (!isValidEmail(email.text)){
+                generateVC.isEnabled = true
+                Toast.makeText(this, "Wrong Email. Please Check",Toast.LENGTH_SHORT).show()
+            }
+            else{
+                progressUploading.show()
+                val thread = Thread {
+                    val verifiableClaim = generateDocVC(didDocument)
+                    val messageDigest: MessageDigest = MessageDigest.getInstance("sha-512")
+
+                    val vc = gson.fromJson(verifiableClaim, VCCover::class.java)
+                    val vcHash = String(
+                        messageDigest.digest(gson.toJson(vc).toByteArray()),
+                        StandardCharsets.UTF_8
+                    )
+                    uploadFileToDrive(verifiableClaim.toByteArray(), did, didLink, didHash, vcHash)
+                }
+                thread.start()
+            }
+
         }
 
         onCheckedGenderRG(genderRG)
 
+    }
+
+    private fun isValidEmail(target: CharSequence?): Boolean {
+        return !TextUtils.isEmpty(target) && Patterns.EMAIL_ADDRESS.matcher(target!!).matches()
+    }
+
+    //display loading dialog
+    private fun displayLoading(context: Context, message: String): ProgressDialog {
+        val progress = ProgressDialog(context)
+        progress.setMessage(message)
+        progress.setProgressStyle(ProgressDialog.STYLE_SPINNER)
+        progress.isIndeterminate = true
+        progress.setCancelable(false)
+        return progress
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun buttonEffect(button: View, color : Int) {
+        button.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.background.setColorFilter(getColor(color), PorterDuff.Mode.SRC_ATOP)
+                    v.invalidate()
+                }
+                MotionEvent.ACTION_UP -> {
+                    v.background.clearColorFilter()
+                    v.invalidate()
+                }
+            }
+            false
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -142,22 +200,24 @@ class VCGenerateActivity : BaseActivity() {
     }
 
 
-    private fun generateDocVC(): String {
+    private fun generateDocVC(didDocument: String): String {
 
-        val gson = Gson()
         Log.i("downloading", "below gson" + KeyHolder.getPrivateKey())
 
         val data = KeyHolder.getObject()
         val privateKey = data.privateKey
-        Log.i("downloading",privateKey )
+        Log.i("downloading", privateKey)
 //        val issuerDid
-        val issuerDidDocument = data.did
-//
-        val issuerDid = gson.fromJson(issuerDidDocument,DIDDocument::class.java).did
-        Log.i("downloading",issuerDid)
+        val issuerDid = data.did
+
+        Log.i("downloading", issuerDid)
 
         val messageDigest: MessageDigest = MessageDigest.getInstance("sha-512")
-        didHash = messageDigest.digest(did.toByteArray()).toString()
+        didHash = Base64.getEncoder().encodeToString(messageDigest.digest(didDocument!!.toByteArray()))
+        Log.i("blockchain", "didDocument " + didDocument)
+        Log.i("blockchain", "didHash" + didHash)
+        Log.i("blockchain", "didHash" + did)
+
 
 
         val vc: VerifiableClaim = VerifiableClaimGenerator.generateVC(
@@ -165,11 +225,12 @@ class VCGenerateActivity : BaseActivity() {
             lName.text.toString(), email.text.toString(), "male", speciality.text.toString(),
             hospital.text.toString(), didHash, "issuerDid"
         )
-        val vcHash = String(
-            messageDigest.digest(gson.toJson(vc).toByteArray()),
-            StandardCharsets.UTF_8
+        val vcHash = Base64.getEncoder().encodeToString(
+            messageDigest.digest(
+                gson.toJson(vc).toByteArray()
+            )
         )
-        Log.i("downloading", "below vc cover" + KeyHolder.getPrivateKey())
+        Log.i("downloading", "below vc cover" + gson.toJson(vc).toString())
         val vcCover = VcSigner.signVC(
             vc,
             vcHash,
@@ -183,12 +244,20 @@ class VCGenerateActivity : BaseActivity() {
     }
 
 
-    private fun uploadFileToDrive(byteArray: ByteArray, did: String, didLink:String, didHash:String, vcHash:String) {
-        runOnUiThread {
-//            progress.show()
-        }
-
-        mDriveServiceHelper!!.uploadFile(byteArray, "application/json", null, "verifiableClaim.json")
+    private fun uploadFileToDrive(
+        byteArray: ByteArray,
+        did: String,
+        didLink: String,
+        didHash: String,
+        vcHash: String
+    ) {
+        Log.i("blockchain", "link " + didLink)
+        mDriveServiceHelper!!.uploadFileToRoot(
+            byteArray,
+            "application/json",
+            null,
+            "verifiableClaim.json"
+        )
             ?.addOnSuccessListener { googleDriveFileHolder ->
                 val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
                 val v = gson.toJson(googleDriveFileHolder)
@@ -199,16 +268,17 @@ class VCGenerateActivity : BaseActivity() {
                     "on success File upload" + gson.toJson(googleDriveFileHolder)
                 )
                 runOnUiThread {
-//                    progress.dismiss()
+                    progressUploading.dismiss()
+                    generateVC.isEnabled = true
                 }
                 Toast.makeText(this, "Successfully Uploaded", Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, RegisterActivity::class.java)
                 intent.putExtra("DoctorDid", did)
-                intent.putExtra("didLink",didLink)
+                intent.putExtra("didLink", didLink)
                 intent.putExtra("vcLink", obj["webContentLink"].toString())
-                intent.putExtra("didHash",didHash)
-                intent.putExtra("vcHash",vcHash)
-                intent.putExtra("email",email.text.toString())
+                intent.putExtra("didHash", didHash)
+                intent.putExtra("vcHash", vcHash)
+                intent.putExtra("email", email.text.toString())
                 startActivity(intent)
 //                goToNextActivity()
 
@@ -219,7 +289,8 @@ class VCGenerateActivity : BaseActivity() {
                     "on failure of file upload" + e.message
                 )
                 runOnUiThread {
-//                    progress.dismiss()
+                    progressUploading.dismiss()
+                    generateVC.isEnabled = true
                 }
                 Toast.makeText(
                     this, "Could Not Create Your File. Please Check Your Connection and Try Again.",

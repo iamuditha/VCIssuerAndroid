@@ -1,14 +1,13 @@
 package com.example.vcissuerandroid.utils
 
-import com.example.vcissuerandroid.myDetails
+import com.example.vcissuerandroid.MyDetails
 import com.google.gson.JsonElement
-import java.security.PrivateKey
 
 object KeyHolder {
 
     var pKey : String = ""
-
-    var dataObject : myDetails = myDetails("","","",null)
+    var isRegistered : Boolean? = null
+    var dataObject : MyDetails = MyDetails("","","",null)
 
     fun setPrivateKey(key:String){
         pKey = key
@@ -26,9 +25,11 @@ object KeyHolder {
 
     }
 
-    fun getObject(): myDetails {
+    fun getObject(): MyDetails {
         return dataObject
     }
+
+
 
 
 }

@@ -94,7 +94,7 @@ class RegisterActivity : BaseActivity() {
     ){
         val thread = Thread{
             try {
-                val web3j: Web3j = Web3j.build(HttpService("https://c4375655a390.ngrok.io"))
+                val web3j: Web3j = Web3j.build(HttpService("http://35.238.77.15:8545"))
 //                val web3j:Web3j = EthFunctions.connect("https://0cf4bdfe02ab.ngrok.io")
                 val credentials = WalletUtils.loadCredentials(
                     "123456",
@@ -128,7 +128,7 @@ class RegisterActivity : BaseActivity() {
                         progressUploadingToChain.dismiss()
                         Toast.makeText(this,"Successfully Completed Registration ", Toast.LENGTH_SHORT).show()
                     }
-                    sendEmail(doctorDid)
+                    sendEmail(doctorDid,email)
 
                 }else{
                     runOnUiThread{
@@ -136,7 +136,7 @@ class RegisterActivity : BaseActivity() {
                         progressUploadingToChain.dismiss()
                         Toast.makeText(this,status.message, Toast.LENGTH_SHORT).show()
                     }
-
+                    Log.i("blockChain", status.message)
                 }
 
             }catch (e: Exception){
@@ -172,12 +172,12 @@ class RegisterActivity : BaseActivity() {
 //    }
 
     //send an email
-    private fun sendEmail(publicKey: String){
+    private fun sendEmail(publicKey: String, email: String){
         val selectorIntent = Intent(Intent.ACTION_SENDTO)
         selectorIntent.data = Uri.parse("mailto:")
 
         val emailIntent = Intent(Intent.ACTION_SEND)
-        emailIntent.putExtra(Intent.EXTRA_EMAIL, arrayOf("udithaanuranjana25@gmail.com")) /**add doctor email***/
+        emailIntent.putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
         emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Public Key")
         emailIntent.putExtra(Intent.EXTRA_TEXT, publicKey)
         emailIntent.selector = selectorIntent

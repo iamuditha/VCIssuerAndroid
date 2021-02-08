@@ -27,6 +27,7 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import crypto.KeyHandler
 import crypto.did.DID
 import crypto.did.DIDDocument
 import crypto.did.DIDDocumentGenerator
@@ -88,10 +89,18 @@ class DidGenerateActivity : BaseActivity() {
                 generateDid.isEnabled = true
                 Toast.makeText(this, "Could not find the Public Key", Toast.LENGTH_SHORT).show()
             }else{
-                progressDidUploading.show()
                 if (publicKey == ""){
                     publicKey = pubKeyET.text.toString().trim()
                 }
+                var isValidPublicKey = true
+
+                try {
+                    val keyHandler = KeyHandler.getInstance().loadRSAPublicFromPlainText(publicKey)
+                }catch (e:Exception){
+                    isValidPublicKey = false
+                }
+                if (true){
+                    progressDidUploading.show()
                     val didDocument = generateDidDoc(publicKey)
                     Log.i("didGenerator", publicKey)
                     Log.i("didGenerator", didDocument)
@@ -99,6 +108,10 @@ class DidGenerateActivity : BaseActivity() {
                         uploadFileToDrive(didDocument.toByteArray(),didDocument)
                     }
                     thread.start()
+                }else{
+                    Toast.makeText(this,"Invalid Public Key", Toast.LENGTH_SHORT).show()
+                }
+
            }
         }
 
@@ -146,6 +159,18 @@ class DidGenerateActivity : BaseActivity() {
             if (data.data != null){
                 publicKey = readTextFromUri(data.data!!)!!
                 Log.i("filePicker", publicKey)
+                if (true){
+                    progressDidUploading.show()
+                    val didDocument = generateDidDoc(publicKey)
+                    Log.i("didGenerator", publicKey)
+                    Log.i("didGenerator", didDocument)
+                    val thread = Thread{
+                        uploadFileToDrive(didDocument.toByteArray(),didDocument)
+                    }
+                    thread.start()
+                }else{
+                    Toast.makeText(this,"Invalid Public Key", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

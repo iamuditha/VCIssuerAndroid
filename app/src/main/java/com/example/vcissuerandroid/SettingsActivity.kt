@@ -15,10 +15,10 @@ import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
+import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
-import androidx.core.content.ContextCompat.startActivity
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.bumptech.glide.Glide
@@ -136,7 +136,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
         val email: String? = prefs.getString("email", "no email")
         val url: String? = prefs.getString("url", "no url")
 
-        Log.i("myImage",url)
+        Log.i("myImage", url)
 
         val navigationView: NavigationView = findViewById<NavigationView>(R.id.nav_view)
         val headerView: View = navigationView.getHeaderView(0)
@@ -338,7 +338,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
 
                     runOnUiThread {
                         KeyHolder.isRegistered = true
-                        createDid.background = getDrawable(R.drawable.grey_button_background)
+                        createDid.setBackgroundColor(getColor(R.color.intro_description_color))
                     }
                 }
                 Log.i("myFileList", check.toString())

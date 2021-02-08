@@ -67,6 +67,9 @@ class DidGenerateActivity : BaseActivity() {
         pubKeyET = findViewById(R.id.pKeyET)
         uploadButton = findViewById(R.id.uploadBtn)
 
+        buttonEffect(generateDid, R.color.gradient_end_color)
+        buttonEffect(uploadButton,R.color.yellow)
+
 
         //toolbar and drawer setup
         setSupportActionBar(toolbar_main)

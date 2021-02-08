@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.graphics.PorterDuff
 import android.os.AsyncTask
 import android.os.Bundle
@@ -14,8 +15,8 @@ import android.util.Log
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
+import android.view.View.OnTouchListener
 import android.widget.ImageView
-import android.widget.RelativeLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -72,6 +73,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
     lateinit var progressSearchingDid: ProgressDialog
 
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
@@ -84,6 +86,9 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
 
         checkForGooglePermissions()
         listFilesInDrive()
+        buttonEffect(getStarted)
+
+//        buttonEffect(createDid)
 
 //        val link = "https://drive.google.com/uc?id=1iIPkxoL1TQXgJr_qvDVrxsPJk_iD8ajC&export=download"
 //
@@ -154,7 +159,20 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
         }
         getPermission()
 
+//        getStarted.setOnTouchListener { _, event ->
+//            if (event.action == MotionEvent.ACTION_UP) {
+//                getStarted.background.setColorFilter(getColor(R.color.yellow), PorterDuff.Mode.SRC_ATOP)
+//                getStarted.invalidate()
+//            } else if (event.action == MotionEvent.ACTION_DOWN) {
+//                getStarted.background.clearColorFilter()
+//                getStarted.invalidate()
+//            }
+//            false
+//        }
+
         getStarted.setOnClickListener {
+//            getStarted.background.setColorFilter(getColor(R.color.yellow), PorterDuff.Mode.SRC_ATOP)
+//            getStarted.background.clearColorFilter()
             val myObject = KeyHolder.getObject()
             buttonEffect(getStarted)
             if (myObject.did == "" || myObject.privateKey == "" || myObject.publicKey == "" || myObject.wallet == null) {
@@ -179,7 +197,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
 
 
         createDid.setOnClickListener {
-            if (KeyHolder.isRegistered != null) {
+            if (KeyHolder.isRegistered != null || KeyHolder.isRegistered == false) {
 
                 if (KeyHolder.isRegistered == false) {
                     buttonEffect(createDid)
@@ -261,6 +279,10 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
 
     }
 
+    override fun onBackPressed() {
+        Toast.makeText(this,"Can not go back",Toast.LENGTH_SHORT).show()
+    }
+
     //display loading dialog
     private fun displayLoading(context: Context, message: String): ProgressDialog {
         val progress = ProgressDialog(context)
@@ -273,7 +295,10 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
 
     @SuppressLint("ClickableViewAccessibility")
     fun buttonEffect(button: View) {
+//        v.background.setColorFilter(getColor(R.color.yellow), PorterDuff.Mode.SRC_ATOP)
+
         button.setOnTouchListener { v, event ->
+            v.background.setColorFilter(getColor(R.color.yellow), PorterDuff.Mode.SRC_ATOP)
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     v.background.setColorFilter(getColor(R.color.yellow), PorterDuff.Mode.SRC_ATOP)
@@ -471,7 +496,7 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
                 progressSearchingDid.dismiss()
                 Toast.makeText(
                     this,
-                    "There was a Problem. Please Check Your Connection and try again",
+                    "There was a Problem. Could not find your key",
                     Toast.LENGTH_SHORT
                 ).show()
                 getStarted.isEnabled = true
@@ -553,6 +578,10 @@ class SettingsActivity : BaseActivity(), NavigationView.OnNavigationItemSelected
     }
 
     private fun goToNextActivity() {
+        runOnUiThread {
+            KeyHolder.isRegistered = true
+            createDid.setBackgroundColor(getColor(R.color.intro_description_color))
+        }
         val intent = Intent(this, DidGenerateActivity::class.java)
         startActivity(intent)
     }

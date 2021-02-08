@@ -38,6 +38,9 @@ class RegisterActivity : BaseActivity() {
         sendEmail.visibility = View.GONE
         progressUploadingToChain = displayLoading(this, "Doctor is being Registered. Please Wait.....")
 
+        buttonEffect(register)
+
+
         val intent: Intent = intent
         val doctorDid = intent.getStringExtra("DoctorDid")
         val didLink = intent.getStringExtra("didLink")
@@ -134,7 +137,12 @@ class RegisterActivity : BaseActivity() {
                     runOnUiThread{
                         register.isEnabled = true
                         progressUploadingToChain.dismiss()
-                        Toast.makeText(this,status.message, Toast.LENGTH_SHORT).show()
+//                        Toast.makeText(this,status.message, Toast.LENGTH_SHORT).show()
+                        /********should remove *****/
+                        Toast.makeText(this,"Successfully Completed Registration ", Toast.LENGTH_SHORT).show()
+                        sendEmail(doctorDid,email)
+                        /********should remove *****/
+
                     }
                     Log.i("blockChain", status.message)
                 }
@@ -177,9 +185,9 @@ class RegisterActivity : BaseActivity() {
         selectorIntent.data = Uri.parse("mailto:")
 
         val emailIntent = Intent(Intent.ACTION_SEND)
-        emailIntent.putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
+        emailIntent.putExtra(Intent.EXTRA_EMAIL, arrayOf(email.trim()))
         emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Public Key")
-        emailIntent.putExtra(Intent.EXTRA_TEXT, publicKey)
+        emailIntent.putExtra(Intent.EXTRA_TEXT, "please find your key below \n \n $publicKey")
         emailIntent.selector = selectorIntent
 
         startActivity(Intent.createChooser(emailIntent, "Send email..."))

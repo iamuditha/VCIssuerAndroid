@@ -25,8 +25,13 @@
             android:theme="@style/newAppTheme"/>
 
         <activity android:name=".BaseActivity" />
-        <activity android:name=".SignInActivity" />
-        <activity android:name=".SplashScreenActivity">
+        <activity android:name=".SignInActivity"
+            android:screenOrientation="sensorPortrait"
+            android:noHistory="true"/>
+        <activity android:name=".SplashScreenActivity"
+            android:screenOrientation="sensorPortrait"
+            android:noHistory="true"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

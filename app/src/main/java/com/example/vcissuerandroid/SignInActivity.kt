@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.vcissuerandroid.utils.KeyHolder
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -77,6 +79,10 @@ class SignInActivity : AppCompatActivity() {
         }
     }
 
+    override fun onBackPressed() {
+        Toast.makeText(this,"Can not go back at this stage",Toast.LENGTH_SHORT).show()
+    }
+
     private fun handleSignInResult(completedTask: Task<GoogleSignInAccount>) {
         try {
             val account = completedTask.getResult(ApiException::class.java)
@@ -103,6 +109,7 @@ class SignInActivity : AppCompatActivity() {
         editor.putString("name", account.displayName)
         editor.putString("url", account.photoUrl.toString())
         editor.apply()
+        KeyHolder.isRegistered = false
     }
 
 //    private fun checkForGooglePermissions() {

@@ -80,6 +80,7 @@ class VCGenerateActivity : BaseActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setHomeButtonEnabled(true)
 
+
         //get data from shared preference
         val prefs: SharedPreferences = getSharedPreferences("MY_DATA", MODE_PRIVATE)
 //        didDocument = prefs.getString("myDid", null)
@@ -87,6 +88,8 @@ class VCGenerateActivity : BaseActivity() {
 
         //initialize xml
         generateVC = findViewById(R.id.vcGenerator)
+        buttonEffect(generateVC, R.color.gradient_end_color)
+
         fName = findViewById(R.id.fNameET)
         lName = findViewById(R.id.lNameET)
         email = findViewById(R.id.emailET)
